@@ -67,7 +67,7 @@ public void method10() throws Exception {
 첫번째 전환 방법은 내부에서 발생한 예외를 그대로 던지는 것이 그 예외상황에 대한 적절한 의미를 부여해주지 못하는 경우에, 의미를 분명하게 해줄 수 있는 예외로 바꿔주기 위해서다.
 예를 들어, 새로운 사용자를 등록하려고 시도했을 때 아이디가 같은 사용자가 있으면 SQLException을 발생한다. 이 경우에 단순히 SQLException을 던져버리면 서비스 계층에서는 해당 에러가 아이디 중복으로 인한 에러인지 DB서버에 장애가 있는지 쉽게 구분하기 어렵다.  
 의미가 분명한 예외를 던지면 서비스 계층 오브젝트가 적절한 복구 작업을 시도할 수 있다.
-~~~
+~~~java
 public void add(User user) throws DuplicateUserException, SQLException {
   try{
     ... //user를 DB에 추가하는 코드
