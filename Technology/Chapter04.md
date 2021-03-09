@@ -123,4 +123,13 @@ public interface UserDao {
   public void add(User user) throws JdoException;       // JDO
 }
 ~~~
-물론 단순히 ```public void add(User user) throws Exception;``` 으로 묶어버릴 수도 있지만 무책임한 선언이다.
+물론 단순히 ```public void add(User user) throws Exception;``` 으로 묶어버릴 수도 있지만 무책임한 선언이다. 다행히도 JDBC보다 늦게 등장한 JDO, Hibernate, JPA 등의 기술은 SQLException 같은 체크 예외 대신 런타임 예외를 던진다. 따라서 throws에 선언을 해주지 않아도 된다. 남은 것은 SQLException을 던지는 JDBC API를 직접 사용하는 DAO 뿐인, 이 경우에는 DAO 메소드 내에서 런타임 예외로 포장해서 던져줄 수 있다. 그러면 DAO 메소드는 처음 의도했던 대로 다음과 같이 선언해도 된다. 
+<br>
+~~~java
+public interface UserDao {
+  public void add(User user)
+}
+~~~
+<br>
+하지만 데이터 액새스를 하다 발생하는 모든 예외를 무시해도 될까? '아이디 중복으로 인한 예외'처럼 의미 있게 처리할 수 있는 예외도 있다. 문제는 데이터 액세스 기술이 다르면 같은 상황임에도 다른 종류의 예외를 던진다는 것이다.  
+그래서 스프링은 자바의 다양한 데이터 액세스 기술을 사용할 때 발생하는 예외들을 추상화해서 **DataAccessException** 계층구조 안에 정리해놓았다. 우리는 추상화된 예외를 통해서 다른 액세스 기술을 사용하더라도 같은 상황이면 같은 예외를 받아 처리할 수 있다.
