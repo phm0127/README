@@ -91,3 +91,18 @@ public void add(User user) throws DuplicateUserException, SQLException {
 그렇기 때문에 스프링의 JdbcTemplate은 템플릿과 콜백 안에서 발생하는 모든 SQLException을 런타임 예외인 DataAccessException으로 포장해서 던진다. 따라서, JdbcTemplate을 사용하는 Dao 메소드에서는 꼭 필요한 경우에만 런타임 예외인 DataAccessException을 잡아서 처리하면 된다.  
   
   
+
+### JDBC의 한계
+JDBC는 자바를 이용해 DB에 접근하는 방법을 추상화된 API형태로 제공해 서로 다른 DB가 JDBC 표준을 따라 만들어진 드라이버를 제공하게 해준다. 내부 구현이 DB마다 다르겠지만 표준 인터페이스를 통해 기능들을 제공해주기 때문에 개발자는 DB 종류에 상관없이 DB에서 제공하는 기능을 사용 수 있다.  
+하지만 그럼에도 DB를 자유롭게 사용하는데는 두 가지 걸림돌이 있다.  
+  
+  
+#### 비표준 SQL
+첫 번째 문제는 JDBC 코드에서 사용하는 SQL이다. SQL이 어느 정도 표준화된 언어이고 표준 규약이 있긴 하지만 대부분의 DB는 표준을 따르지 않는 비표준 문법과 기능을 제공한다. 문제는 이런 비표준 문법이 매우 폭넓게 사용된다는 것이다. 이 부분은 뒷장에서 더 자세히 다루므로 일단 넘어가겠다.  
+  
+#### 호환성 없는 SQLException의 DB 에러정보
+두 번째 문제는 바로 SQLException이다. DB를 사용하다가 발생할 수 있는 원인은 다양하다. 문제는 DB마다 SQL만 다른 것이 아니라 에러의 종류와 원인도 제각각이라는 점이다. 그래서 JDBC는 다양한 예외를 그냥 SQLException에 담아 버린다.
+~~~
+  if(e.getErrorCode == MysqlErrorNumbers.ER_DUP_ENTRY)
+~~~
+위 코드는 앞에서 만든 add() 메소드 안에서 아이디가 중복인 예외를 체크하는 if문이다. 그런데 여기서 사용한 에러 코드는 MySQL 전용 코드일 뿐이다. DB가 MySQL에서 다른 DB로 바뀐다면 위 코드는 정상 동작하지 않을 것이다. 그래서 SQLException은 예외가 발생했을 때의 DB 상태를 담은 SQL 상태정보를 부가적으로 제공한다. getSQLState() 메소드로 예외상황에 대한 상태정보를 가져올 수 있다. 이 상태 정보는 DB별로 달라지는 코드정보를 대신할 수 있도록 표준을 따르고 있다. 문제는 JDBC에서 상태 코드를 정확하게 만들어 주지 않는다는 점이다.
