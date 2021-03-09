@@ -102,7 +102,25 @@ JDBC는 자바를 이용해 DB에 접근하는 방법을 추상화된 API형태�
   
 #### 호환성 없는 SQLException의 DB 에러정보
 두 번째 문제는 바로 SQLException이다. DB를 사용하다가 발생할 수 있는 원인은 다양하다. 문제는 DB마다 SQL만 다른 것이 아니라 에러의 종류와 원인도 제각각이라는 점이다. 그래서 JDBC는 다양한 예외를 그냥 SQLException에 담아 버린다.
-~~~
+~~~java
   if(e.getErrorCode == MysqlErrorNumbers.ER_DUP_ENTRY)
 ~~~
-위 코드는 앞에서 만든 add() 메소드 안에서 아이디가 중복인 예외를 체크하는 if문이다. 그런데 여기서 사용한 에러 코드는 MySQL 전용 코드일 뿐이다. DB가 MySQL에서 다른 DB로 바뀐다면 위 코드는 정상 동작하지 않을 것이다. 그래서 SQLException은 예외가 발생했을 때의 DB 상태를 담은 SQL 상태정보를 부가적으로 제공한다. getSQLState() 메소드로 예외상황에 대한 상태정보를 가져올 수 있다. 이 상태 정보는 DB별로 달라지는 코드정보를 대신할 수 있도록 표준을 따르고 있다. 문제는 JDBC에서 상태 코드를 정확하게 만들어 주지 않는다는 점이다.
+위 코드는 앞에서 만든 add() 메소드 안에서 아이디가 중복인 예외를 체크하는 if문이다. 그런데 여기서 사용한 에러 코드는 MySQL 전용 코드일 뿐이다. DB가 MySQL에서 다른 DB로 바뀐다면 위 코드는 정상 동작하지 않을 것이다. 그래서 SQLException은 예외가 발생했을 때의 DB 상태를 담은 SQL 상태정보를 부가적으로 제공한다. getSQLState() 메소드로 예외상황에 대한 상태정보를 가져올 수 있다. 이 상태 정보는 DB별로 달라지는 코드정보를 대신할 수 있도록 표준을 따르고 있다. 문제는 JDBC에서 상태 코드를 정확하게 만들어 주지 않는다는 점이다.  
+
+### DataAccessException
+스프링 JdbcTemplate의 DataAccessException은 단순히 JDBC의 SQLException을 전환하는 용도로만 만들어진 것은 아니다. DataAccessException은 의미가 같은 예외라면 데이터 액세스 기술의 종류와 상관없이 일관된 예외가 발생하도록 만들어 준다.  
+~~~java
+public interface UserDao {
+  public void add(User user)
+}
+~~~
+위 인터페이스는 **데이터 액세스 기술에 독립적인 이상적인 인터페이스**이다. 하지만 위의 메소드 선언을 사용할 수 없다. DAO에서 사용하는 데이터 액세스 기술의 API가 예외를 던지기 때문이다.  
+<br><br>
+~~~java
+public interface UserDao {
+  public void add(User user) throws PersistentException; // JPA
+  public void add(User user) throws HibernateException; // Hibernate
+  public void add(User user) throws JdoException;       // JDO
+}
+~~~
+물론 단순히 ```public void add(User user) throws Exception;``` 으로 묶어버릴 수도 있지만 무책임한 선언이다.
