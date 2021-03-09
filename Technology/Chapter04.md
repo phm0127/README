@@ -36,12 +36,12 @@ public void method10() throws Exception {
 
 ### 예외의 종류와 특징
 자바에서 throw를 통해 발생시킬 수 있는 예외는 크게 3가지가 있다.
-+ Error
++ Error  
     java.lang.Error 클래스의 서브 클래스들이다. 에러는 시스템에 비정상적인 상황이 발생했을 경우에 사용된다. 이 경우, 애플리케이션 코드에서 에러를 잡아도 아무런 대응을 할 수 없기 때문에 시스템 레벨에서 특별한 작업을 하는게 아니라면 애플리케이션에서는 이런 에러에 대한 처리는 신경쓰지 않아도 된다.  
-+ Exception과 체크 예외
++ Exception과 체크 예외  
     java.lang.Exception 클래스와 그 서브클래스들이다. 개발자들이 만든 애플리케이션 코드의 작업 중에 예외 상황이 발생 했을 경우에 사용된다.  
     Exception 클래스는 다시 체크 예외와 언체크 예외로 구분된다. 체크 예외는 Exception 클래스의 서브클래스 이면서 RuntimeException 클래스를 상속하지 않은 것들이고, 언체크 예외는 RuntimeException을 상속한 클래스들을 말한다.  
-+ RuntimeException과 언체크/런타임 예외
++ RuntimeException과 언체크/런타임 예외  
     java.lang.RuntimeException 클래스를 상속한 예외들은 명시적인 예외처리를 하지 않기 때문에 언체크 예외라고 불린다. 에러와 마찬가지로 catch문으로 예외를 잡거나 throws를 선언하지 않아도 된다.  
     런타임 예외는 주로 프로그램의 오류가 있을 때 발생하도록 의도된 것들이다. 피할 수 있지만 개발자가 부주의해서 발생할 수 있는 경우에 발생하도록 만든 것이 런타임 예외이기 대문에 굳이 catch나 throws를 사용하지 않아도 된다.  
   
