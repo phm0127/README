@@ -177,7 +177,6 @@ MockUserDao는 UserDao 인터페이스를 구현해야하기 때문에 테스트
 
 ~~~java
 
-
 @Test
 public void upgradeLevels() throws Exception {
   UserServiceImpl userServiceImpl = new UserServiceImpl();
@@ -189,8 +188,8 @@ public void upgradeLevels() throws Exception {
   
   List<User> updatedUsers = mockUserDao.getUpdatedUsers();
   assertThat(updatedUsers.size(),is(2));
-  checkUserAndLevel(updatedUsers.get(0), "첫번째 사용자",LEVEL.SILVER);
-  checkUserAndLevel(updatedUsers.get(0), "첫번째 사용자",LEVEL.GOLD);
+  checkUserAndLevel(updatedUsers.get(0), "두 번째 사용자",LEVEL.SILVER);
+  checkUserAndLevel(updatedUsers.get(0), "네 번째 사용자",LEVEL.GOLD);
 }
 
 public void checkUserAndLevel(User updatedUser, String expectedId, Level expectedLevel) {
@@ -215,4 +214,37 @@ public void checkUserAndLevel(User updatedUser, String expectedId, Level expecte
 + 스프링 테스트 컨텍스트 프레임워크를 이용하는 테스트는 통합 테스트다. 가능하면 스프링의 지원 없이 코드 레벨에서 직접 DI를 사용하면서 단위 테스트를 하는 것이 좋지만 스프링 설정 자체도 테스트 대상이고, 스프링을 이용해 좀 더 추상적인 레벨에서 테스트해야 할 경우도 있다.  
 <br>
 
+단위 테스트를 만들기 위해서 스텁이나 목 오브젝트의 사용이 필수적이다. 의존 관계가 없는 단순한 클래스나 세부 로직을 검증하기 위해 메소드 단위로 테스트할 때가 아니라면, 대부분 의존 오브젝트를 필요로 하는 코드를 테스트하게 되기 때문이다. 하지만 매번 목 오브젝트를 만드는 일은 번거롭다. 다행히 이런 목 오브젝트를 편리하게 작성하도록 도와주는 목 오브젝트 지원 프레임워크가 있다.  
+<br>
+
 ### Mockito 프레임워크
+Mockito 프레임워크가 그 중 하나다. Mockito 프레임워크를 사용하면 UserDAO 인터페이스를 구현한 클래스를 만들 필요도 없고 일일히 기능들을 작성할 필요도 없다. Mockito의 Mock 오브젝트는 다음의 단계를 거쳐서 사용하면 된다.  
++ 인터페이스를 이용해 목 오브젝트를 만든다.  
++ 목 오브젝트가 리턴할 값이 있으면 이를 지정해준다. 예외를 강제로 던지게 만들 수도 있다.  
++ 테스트 대상 오브젝트에 DI해서 목 오브젝트가 테스트 중에 사용되도록 만든다.  
++ 테스트 대상 오브젝트를 사용한 후에 목 오브젝트의 특정 메소드가 호출 됐는지, 어떤 값을 가지고 몇번 호출됐는지를 검증한다.  
+
+<br>
+
+~~~java
+
+@Test
+public void upgradeLevels() throws Exception {
+  UserServiceImpl userServiceImpl = new UserServiceImpl();
+  
+  UserDao mockUserDao = mock(UserDAO.class);
+  when(mockUserDao.getAll()).thenReturn(this.users);
+  userServiceImpl.setUserDao(mockUserDao);
+  
+  userServiceImpl.upgradeLevels();
+  
+  verify(mockUserDao, times2)).update(any(User.class));
+  verify(mockUserDao).update(users.get(1)); // 두 번째 사용자가 업데이트 됐는지 검사
+  assertThat(users.get(1).getLevel()), is(Level.SILVER));
+  verify(mockUserDao).update(users.get(3)); // 네 번째 사용자가 업데이트 됐는지 검사
+  assertThat(users.get(3).getLevel()), is(Level.GOLD));
+}
+~~~
+
+<br>
+이렇게 Mockito를 사용하면 Mock 오브젝트를 위한 구현체를 따로 만들 필요없이 편하게 테스트 코드를 작성할 수 있다.
