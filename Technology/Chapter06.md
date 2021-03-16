@@ -26,6 +26,7 @@ public void upgradeLevels() {
   }
 }
 ~~~
+
 얼핏보면 트랜잭션 경계설정 코드와 비즈니스 로직 코드가 복잡하게 얽혀 있는 듯이 보이지만 자세히 살펴보면 비즈니스 로직 코드를 사이에 두고 트랜잭션 시작과 종료를 담당하는 코드가 앞뒤에 위치하고 있다. 또, 이 코드의 특징은 성격이 다른 두 코드가 서로 주고받는 정보가 없다는 점이다. 
 따라서, 이 두 코드는 성격이 다를 뿐만 아니라 서로 주고받는 것도 없는 완벽하게 독립적인 코드다.
 ~~~java
@@ -56,6 +57,7 @@ private void upgradeLevelsInternal(){
     }
 }
 ~~~
+
 따라서 위 코드처럼 비즈니스 로직을 담당하는 코드를 메소드로 추출해서 독립시킬 수 있다. 이렇게 코드를 분리하고 나니 한결 깔끔해졌다. 적어도 사용자가 레벨 업그레이드를 담당하는 비즈니스 로직을 수정하다가 실수로 트랜잭션 코드를 건드릴 일도 없어졌다.  
 비즈니스 로직을 담당하는 코드가 깔끔하게 분리돼서 보기 좋긴 하지만 여전히 트랜잭션을 담당하는 기술적인 코드가 버젓이 UserService 안에 자리 잡고 있다. 우리는 기존에 인터페이스를 통해 Client와 UserService간의 느슨한 결합을 갖는 구조였다.  
 
@@ -76,6 +78,7 @@ private void upgradeLevelsInternal(){
 그렇게 하기 위해서 위의 그림과 같은 구조를 생각해 볼 수 있다. UserServiceImpl에는 비즈니스 로직만 담고 UserServiceTx에는 트랜잭션 경계를 설정해주는 코드를 담는다. UserServiceTx는 비즈니스 로직을 담지 않고 단지 트랜잭션의 경계설정이라는 책임만 맡을 뿐이다.  
 <br><br>
 ##### 아래 코드는 각각 UserServiceImpl, UserServiceTx 클래스의 코드이다.
+
 ~~~java
 public class UserServiceImpl implements UserService{
   UserDAO userDao;
