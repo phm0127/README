@@ -132,4 +132,87 @@ public class UserServiceTx implements UserService{
 ![image](https://user-images.githubusercontent.com/7456710/111270713-8c693c00-8673-11eb-84df-f767ac801256.png)
 
 <br>
-Client와 UserService 구현 클래스들의 의존관계를 표현하면 위의 그림과 같다.
+Client와 UserService 구현 클래스들의 의존관계를 표현하면 위의 그림과 같다. 이렇게 트랜잭션 경계설정 코드의 분리와 DI를 통한 연결을 하게되면 다음과 같은 장점을 얻는다.  
++ 비즈니스 로직을 담당하고 있는 UserServiceImpl의 코드를 작성할 때는 트랜잭션과 같은 기술적인 내용에는 전혀 신경 쓰지 않아도 된다. 트랜잭션의 적용이 필요한지도 신경 쓰지 않아도 된다. 따라서 언제든지 트랜잭션 기능을 도입할 수 있다.  
++ 비즈니스 로직에 대한 테스트를 손쉽게 만들어 낼 수 있다.  
+
+
+### 고립된 단위 테스트
+가장 편하고 좋은 테스트 방법은 가능한 작은 단위로 쪼개서 테스트하는 것이다. 작은 단위의 테스트가 좋은 이유는 테스트가 실패했을 때 그 원인을 찾기 쉽기 때문이다. 반대로 테스트에서 오류가 발견됐을 때 그 테스트가 진행되는 동안 실행된 코드의 양이 많다면 그 원인을 찾기가 매우 힘들어질 수도 있다.  
+우리가 만든 UserService의 테스트를 만든다고 생각해보자. UserService는 간단한 기능만 가지고 있지만 여러 타입의 의존 오브젝트가 필요하다. 따라서 UserService의 기능이 잘 작동하는지 전체적인 기능을 테스트 한다면 UserService를 테스트하는 것처럼 보이지만 사실은 그 뒤에 존재하는 훨씬 더 많은 오브젝트와 환경, 서비스, 서버, 심지어 네트워크까지 함께 테스트 하는 셈이 된다. 그 중 하나라도 문제를 일으킨다면 UserService에 대한 테스트가 실패한다. 그래서 UserService라는 테스트 대상이 단위 테스트인 것처럼 보이지만 사실은 그 뒤의 의존관계를 따라 등장하는 오브젝트와 서비스, 환경 등이 모두 합쳐서 테스트 대상이 되는 것이다.  
+막상 UserService는 간단한 동작을 하는데 뒤에 숨겨진 오브젝트들이 복잡한 기능을 한다면 배보다 배꼽이 더 큰 작업이 되버린다.  
+<br>
+그래서 테스트의 대상이 환경이나 외부 서버, 다른 클래스의 코드에 종속되고 영향을 받지 않도록 고립시킬 필요가 있다. 우리가 사용할 수 있는 방법은 mock 오브젝트를 만들어 UserServiceImpl이 mock 오브젝트를 가르키도록 하는것이다.  
+<br>
+
+~~~java
+static class MockUserDao implements UserDAO{
+  private List<User> users;                           // 레벨 업그레이드 후보 User 오브젝트 목록
+  private List<User> updatedUsers = new ArrayList();   // 업그레이드 대상 오브젝트를 저장해둘 목록
+  
+  public MockUserDao(List<User> users){
+    this.users = users;
+  }
+  
+  public List<User> getUpdatedUsers(){
+    return this.updatedUsers;
+  }
+  
+  public List<User> getAll(){
+    return this.users;
+  }
+  
+  public void update(User user){
+    updatedUsers.add(user);
+  }
+  
+  public void add(User user) { throw new UnsupportedOperationException(); }
+  public void deleteAll() { throw new UnsupportedOperationException(); }
+  
+}
+~~~
+<br>
+MockUserDao는 UserDao 인터페이스를 구현해야하기 때문에 테스트에 사용하지 않는 메소드도 모두 만들어줘야하는 부담이 있다. 그냥 빈 채로 두거나 null을 반환해도 되지만 실수로 사용될 위험이 있으므로 지원하지 않는 기능이라는 예외를 발생하도록 만드는 것이 좋다. MockUserDao는 두 개의 User 타입 List를 정의해둔다. 하나는 생성자를 통해 전달받은 사용자 목록을 저장했뒀다가, getAll() 메소드가 호출되면 DB에서 가져온 것처럼 돌려주는 용도다. 다른 하나는 update(User user) 메소드를 실행하면 넘겨준 대상 User 오브젝트를 저장해뒀다가 검증을 위해 돌려주기 위한 것이다. 이 방법을 사용하면 일일히 DB에 저장했다가 다시 가져올 필요 없이 메모리에서 가지고 있다가 돌려주기만 하면 된다. 다음은 테스트 코드를 보자.
+<br>
+
+~~~java
+
+
+@Test
+public void upgradeLevels() throws Exception {
+  UserServiceImpl userServiceImpl = new UserServiceImpl();
+  
+  MockUserDao mockUserDao = new MockUserDao(this.users);
+  userServiceImpl.setUserDao(mockUserDao);
+  
+  userServiceImpl.upgradeLevels();
+  
+  List<User> updatedUsers = mockUserDao.getUpdatedUsers();
+  assertThat(updatedUsers.size(),is(2));
+  checkUserAndLevel(updatedUsers.get(0), "첫번째 사용자",LEVEL.SILVER);
+  checkUserAndLevel(updatedUsers.get(0), "첫번째 사용자",LEVEL.GOLD);
+}
+
+public void checkUserAndLevel(User updatedUser, String expectedId, Level expectedLevel) {
+    assertThat(updated.getId(), is(expectedId));
+    assertThat(updated.getLevel(), is(expectedLevel));
+}
+~~~
+
+<br>
+
+이렇게 테스트 코드를 작성하면 DB에 영향을 안줄뿐만 아니라 테스트 수행 시간도 비약적으로 줄어든다. 고립된 테스트를 만들려면 목 오브젝트 작성과 같은 약간의 수고가 들지만 그 보상은 충분히 기대할 만하다.  
+<br>
+### 단위테스트와 통합 테스트
+단위 테스트의 단위는 정하기 나름이다. 기능 전체를 하나의 단위로 볼 수 있고 하나의 클래스나 메소드를 단위로 볼 수도 있다. 토비의 스프링에서는 '테스트 대상 클래스를 목 오브젝트 등의 테스트 대역을 이용해 의존 오브젝트나 외부의 리소스를 사용하지 않도록 고립시켜서 테스트 하는 것'을 **단위 테스트**라 부르고 두개 이상의 성격이나 계층이 다른 오브젝트가 연동하도록 만들어 테스트하거나, 외부의 DB나 파일, 서비스 등의 리소스가 참여하는 테스트를 통합 테스트라고 부르기로 했다. 또, 단위 테스트와 통합 테스트 중에서 어떤 방법을 쓰면 좋을지 다음과 같은 가이드 라인을 제시해준다.  
++ 항상 단위 테스트를 먼저 고려한다.  
++ 하나의 클래스나 성격과 목적이 같은 긴밀한 클래스 몇 개를 모아서 외부와의 의존관계를 모두 차단하고 필요에 따라 스텁이나 목 오브젝트 등의 테스트 대역을 이용하도록 테스트를 만든다.  
+  -> 단위 테스트는 테스트 작성도 간단하고 실행 속도도 빠르며 테스트 대상 외의 코드나 환경으로부터 테스트 결과에 영향을 받지 않기 때문에 가장 빠른 시간에 효과적인 테스트를 작성하기에 유리하다.  
++ 외부 리소스를 사용해야만 가능한 테스트는 통합 테스트로 만든다.  
+  + DAO는 단위 테스트로 만들기 어려운 코드다. DAO는 그 자체로 로직을 담고 있기 보다는 DB를 통해 로직을 수행하는 인터페이스와 같은 역할을 하기 때문에 외부 리소스 사용이 불가피하다.  
++ 여러 개의 단위가 의존관계를 가지고 동작할 때를 위한 통합 테스트는 필요하다. 다만, 단위 테스트를 충분히 거쳤다면 통합 테스트의 부담은 상대적으로 줄어든다.  
++ 단위 테스트를 만들기가 너무 복잡하다고 판단되는 코드는 처음부터 통합 테스트를 고려해본다. 이때도 통합 테스트에 참여하는 코드 중 가능한 많은 부분을 단위 테스트로 검증해두는게 유리하다.  
++ 스프링 테스트 컨텍스트 프레임워크를 이용하는 테스트는 통합 테스트다. 가능하면 스프링의 지원 없이 코드 레벨에서 직접 DI를 사용하면서 단위 테스트를 하는 것이 좋지만 스프링 설정 자체도 테스트 대상이고, 스프링을 이용해 좀 더 추상적인 레벨에서 테스트해야 할 경우도 있다.  
+<br>
+
+### Mockito 프레임워크
