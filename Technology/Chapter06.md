@@ -127,4 +127,9 @@ public class UserServiceTx implements UserService{
 ~~~
 
 <br>
-이렇게 수정하면 UserService에는 처음에 트랜잭션을 고려하지 않고 단순하게 로직만을 구현했던 처음 모습으로 돌아왔다. 코드 어디에도 기술이나 서버환경에 관련된 코드는 보이지 않는다. 트랜잭션의 경계설정이라는 부가작업은 UserServiceTx 클래스에서 알아서 처리해준다.
+이렇게 수정하면 UserService에는 처음에 트랜잭션을 고려하지 않고 단순하게 로직만을 구현했던 처음 모습으로 돌아왔다. 코드 어디에도 기술이나 서버환경에 관련된 코드는 보이지 않는다. 트랜잭션의 경계설정이라는 부가작업은 UserServiceTx 클래스에서 알아서 처리해준다.  
+
+![image](https://user-images.githubusercontent.com/7456710/111270713-8c693c00-8673-11eb-84df-f767ac801256.png)
+
+<br>
+Client와 UserService 구현 클래스들의 의존관계를 표현하면 위의 그림과 같다.
