@@ -3,6 +3,7 @@
 스프링이 제공하는 깔끔한 트랜잭션 인터페이스를 썼음에도 비즈니스 로직이 주가 되어야 할 메소드 안에 트랜잭션 경계설정 하는 코드가 더 많은 자리를 차지하고 있다.  
 <br>  
 ### 메소드 분리
+
 ~~~java
 public void upgradeLevels() {
   PlatformTransactionManager transactionManager =
@@ -29,6 +30,7 @@ public void upgradeLevels() {
 
 얼핏보면 트랜잭션 경계설정 코드와 비즈니스 로직 코드가 복잡하게 얽혀 있는 듯이 보이지만 자세히 살펴보면 비즈니스 로직 코드를 사이에 두고 트랜잭션 시작과 종료를 담당하는 코드가 앞뒤에 위치하고 있다. 또, 이 코드의 특징은 성격이 다른 두 코드가 서로 주고받는 정보가 없다는 점이다. 
 따라서, 이 두 코드는 성격이 다를 뿐만 아니라 서로 주고받는 것도 없는 완벽하게 독립적인 코드다.
+
 ~~~java
 public void upgradeLevels() {
   PlatformTransactionManager transactionManager =
@@ -77,7 +79,7 @@ private void upgradeLevelsInternal(){
 우리가 지금 해결하려고 하는 문제는 UserService에는 순수하게 비즈니스 로직을 담고 트랜잭션 경계설정을 담당하는 코드를 외부로 빼내려는 것이다. 하지만 클라이언트가 UserService의 기능을 제대로 이용하려면 트랜잭션이 적용돼야 한다. 
 그렇게 하기 위해서 위의 그림과 같은 구조를 생각해 볼 수 있다. UserServiceImpl에는 비즈니스 로직만 담고 UserServiceTx에는 트랜잭션 경계를 설정해주는 코드를 담는다. UserServiceTx는 비즈니스 로직을 담지 않고 단지 트랜잭션의 경계설정이라는 책임만 맡을 뿐이다.  
 <br><br>
-##### 아래 코드는 각각 UserServiceImpl, UserServiceTx 클래스의 코드이다.
+##### 아래 코드는 각각 UserServiceImpl, UserServiceTx 클래스의 코드이다.  
 
 ~~~java
 public class UserServiceImpl implements UserService{
@@ -93,7 +95,9 @@ public class UserServiceImpl implements UserService{
   }
 }
 ~~~
+
 <br>
+
 ~~~java
 public class UserServiceTx implements UserService{
   UserService userService;
@@ -121,5 +125,6 @@ public class UserServiceTx implements UserService{
 
 }
 ~~~
+
 <br>
 이렇게 수정하면 UserService에는 처음에 트랜잭션을 고려하지 않고 단순하게 로직만을 구현했던 처음 모습으로 돌아왔다. 코드 어디에도 기술이나 서버환경에 관련된 코드는 보이지 않는다. 트랜잭션의 경계설정이라는 부가작업은 UserServiceTx 클래스에서 알아서 처리해준다.
